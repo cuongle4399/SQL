@@ -433,3 +433,92 @@ from sanpham as sp join cthd as c
 on c.masp=sp.masp
 group by c.masp,sp.tensp,sp.masp
 having sum(c.soluong) < (select avg(c.soluong) from cthd as c)
+----------------------------- thực hành 5
+--1. cho biết danh sách những sản phẩm có mã sản phẩm sp01,sp05
+create view banview as
+select *from sanpham
+where masp='sp01' or masp='sp05'
+select * from banview
+drop view banview
+--2.cho biết những sản phẩm bán trong tháng 3 năm 2022
+select * from cthd
+select * from hoadon
+create view banview2 as
+select sp.masp,sp.tensp ,hd.ngayhd from sanpham as sp join cthd as c
+on c.masp=sp.masp 
+join hoadon as hd
+on hd.sohd=c.sohd
+where month(hd.ngayhd) in (3) and year(hd.ngayhd) in (2022)
+select * from banview2
+--3. tạo view gồm các thông tin masp,soluongban,giaban,sohd,ngayhd,thanhtien
+create view thongtin as
+select c.masp,c.soluong,c.giaban,c.sohd,hd.ngayhd,c.soluong *c.giaban as 'thanhtien' from cthd as c join hoadon as hd
+on c.sohd=hd.sohd
+select * from thongtin
+--4. Ấn độ đã cung cấp những mặt hàng nào
+select * from sanpham 
+create view ando as select * from sanpham
+where nuocsx name like'Ấn Độ'
+select * from ando
+--5.Sản Phẩm điện thoại di động do nước nào sản xuất
+-- đang quản lý bán hàng tự nhiên điện thoại di động đâu ra z má
+--6.Những khách hàng nào có doanh số mua hàng cao nhất
+select * from cthd
+select * from hoadon
+create view doanhsomax as
+select top (1) hd.makh, sum( c.soluong * c.giaban ) as[doanh số max] from hoadon as hd join cthd as c
+on c.sohd=hd.sohd
+group by hd.makh,c.sohd
+order by [doanh số max] desc 
+select * from doanhsomax
+--7.Cho biết những hóa đơn (sohd,ngayhd,trị giá) cho những hóa đơn có trị giá < trị giá trung bình
+select * from hoadon
+create view hoadonview as
+select hd.sohd,hd.ngayhd,hd.trigia from hoadon as hd
+where hd.trigia < (select avg(trigia) from hoadon )
+select * from hoadonview
+--8.Hãy cho biết tổng số lượng sản phẩm do Việt Nam sản xuất
+select * from cthd
+create view vietnamview as
+select sum(soluong) as[tổng số lượng sản phẩm do Việt nam sản xuất] from sanpham
+where nuocsx like N'VIỆT NAM'
+group by nuocsx
+select * from vietnamview
+--9.Trong đơn hàng số 3 đặt mua những mặt hàng nào và tổng số tiền là bao nhiêu
+create view donhang3view
+as select masp,sum(soluong*giaban) as[tổng số tiền cho hóa đơn 3]  from cthd
+where sohd ='HD03'
+group by sohd,masp
+select * from donhang3view
+--10.hãy cho biết những khách hàng nào chưa có số điện thoại
+select * from khachhang
+create view dienthoaiview as select makh from khachhang
+where sodt like N''
+select * from dienthoaiview
+--11. Trong công ty có những nhân viên nào cùng ngày sinh
+select * from nhanvien
+create view ngaysinhview as
+select manv, day(ngaysinh) as [ngày sinh trùng] from nhanvien 
+where day(ngaysinh) in (select day(ngaysinh) from nhanvien group by day(ngaysinh) having count(*) >=2)
+select * from ngaysinhview
+--12.Những nhân viên nào chưa xuất được hóa đơn trong 30 ngày
+select * from nhanvien
+select * from hoadon
+select * from cthd
+create view nhanvienview30day as
+select nv. manv from hoadon as hd right join nhanvien as nv
+on hd.manv=nv.manv
+where nv.manv not in (select manv from hoadon group by manv)
+select * from nhanvienview30day
+--13.Cho biết những sản phẩm có số lượng ít hơn 10
+select * from sanpham
+create view sanphamview1 as
+select masp,tensp from sanpham 
+where soluong < 10
+select * from sanphamview1
+--14.Tạo view lưu thông tin khách hàng có số đơn hàng >=3
+select * from hoadon
+create view thongtinkhview as
+select makh,hoten,diachi,sodt,ngaysinh,doanhso from khachhang
+where makh in (select makh from hoadon group by makh having count(*) >=3)
+select * from thongtinkhview
