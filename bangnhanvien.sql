@@ -153,7 +153,7 @@ VALUES
 ('HD08', 'SP07', 131, 100),
 ('HD09', 'SP04', 122, 30),
 ('HD10', 'SP06', 736, 200),
-('HD11', 'SP11', 77, 500);
+('HD11', 'SP11', 77, 500),
 ('HD12', 'SP01', 55, 400),
 ('HD13', 'SP01', 55, 400)
 --thực hành 2:
@@ -506,9 +506,11 @@ select * from nhanvien
 select * from hoadon
 select * from cthd
 create view nhanvienview30day as
-select nv. manv from hoadon as hd right join nhanvien as nv
-on hd.manv=nv.manv
-where nv.manv not in (select manv from hoadon group by manv)
+select manv from nhanvien
+where manv not in (select manv from hoadon where datediff (day,ngayhd,getdate()) <=30)
+---
+select manv,datediff (day,ngayhd,getdate()) from hoadon --test xem ngày
+drop view nhanvienview30day
 select * from nhanvienview30day
 --13.Cho biết những sản phẩm có số lượng ít hơn 10
 select * from sanpham
@@ -522,3 +524,55 @@ create view thongtinkhview as
 select makh,hoten,diachi,sodt,ngaysinh,doanhso from khachhang
 where makh in (select makh from hoadon group by makh having count(*) >=3)
 select * from thongtinkhview
+---------------------------thực hành 6
+--1. Viết thủ tục cho biết doanh số mua hàng của khách hàng có mã x nào đó (x là tham số thủ tục) 
+select * from cthd
+select * from hoadon
+create procedure doanhsovoid (@x char(10)) as
+begin
+select hd.makh,sum(c.soluong*c.giaban) as [doanh số] from cthd as c join hoadon as hd
+on c.sohd=hd.sohd
+where hd.makh=@x
+group by hd.makh
+end
+execute doanhsovoid 'KH04'
+--2.Viết thủ tục để xem masp và tensp của các sản phẩm có giá lớn hơn x và số lượng hiện có ít hơn y (x,y là tham số)
+select * from sanpham
+create procedure sanphamvoid (@x int , @y int) as
+select masp,tensp from sanpham
+where gia > @x and soluong < @y
+execute sanphamvoid '10000','100'
+--3.Viết thủ tục cho biết nhân viên X đã lập bao nhiêu hóa đơn (tham số x là manv)
+select * from hoadon
+create procedure nhanvienvoid (@x char(10))as
+begin 
+select manv, count(*) as [số hóa đơn đã lập] from hoadon
+where @x=manv
+group by manv
+end
+execute nhanvienvoid 'NV007'
+--4.Viết thủ tục X do nhân viên nào lập , có bao nhiêu sản phẩm trên hóa đơn đó (tham số x là số HD)
+select * from hoadon
+select * from cthd
+create procedure nhanvienlapvoid (@x varchar(10) )as
+select hd.manv,count (*) as [số sản phẩm trên hóa đơn đó] from cthd as c join hoadon as hd
+on c.sohd=hd.sohd
+where @x=hd.manv
+group by c.sohd,hd.manv
+drop procedure nhanvienlapvoid 
+execute nhanvienlapvoid 'NV001'
+--5.Viết thủ tục để xem những sản phẩm nào đã được mua với số lượng nhiều nhất
+select * from cthd
+create procedure topsanpham as
+select top 1 c.masp, sum(c.soluong) as [số lượng của sản phẩm đã được mua nhiều nhất] from cthd as c
+group by c.masp
+order by [số lượng của sản phẩm đã được mua nhiều nhất] desc
+execute topsanpham
+--6. Viết thủ tục cho biết thông tin của những sản phẩm có tổng số lượng bán lớn hơn 30
+select * from cthd
+create procedure thongtinvoid as
+begin 
+select * from sanpham
+where masp in (select masp from cthd group by masp having sum(soluong) >30)
+end
+execute thongtinvoid
