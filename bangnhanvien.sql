@@ -576,3 +576,137 @@ select * from sanpham
 where masp in (select masp from cthd group by masp having sum(soluong) >30)
 end
 execute thongtinvoid
+----- thực hành 7
+select * from hoadon
+--1. Viết hàm trả về tổng tiền (giá trị) mà khách hàng phải trả cho hoá đơn 
+create function funtongtien (@makhachhang char (5))
+returns int 
+as
+begin
+declare @tongtien int 
+select @tongtien = sum(trigia) from hoadon group by makh
+return @tongtien
+end
+select dbo.funtongtien ('KH01') as [Tổng tiền của khách hàng trả cho hoá đơn]
+--2.Viết hàm trả về tình trạng bán của sản phẩm . Nếu số lượng của sản phẩm (trong bản cthd) > 100 thì bán chạy , ngược lại là bán chậm .
+select * from cthd
+create function funtinhtrang (@masanpham char (4))
+returns Nvarchar(20)
+as
+begin
+declare @soluong int 
+declare @tinhtrang nchar(20)
+select @soluong = sum(soluong) from cthd 
+where masp= @masanpham
+group by masp
+if (@soluong > 100)
+set @tinhtrang =N'bán nhanh';
+else
+set @tinhtrang =N'bán chậm'
+return @tinhtrang
+end
+select dbo.funtinhtrang ('SP01') as [tình trạng sản phẩm]
+--3. Viết hàm trả về một bảng gồm các thông tin masp,tensp và soluong của các sản phẩm hiện có trong công ty
+select * from sanpham
+create function funthongtin ()
+returns table 
+as
+return (select masp,tensp,soluong from sanpham)
+select * from funthongtin ()
+--4. Viết hàm trả về một bảng gồm danh sách khách hàng có doanh số mua hàng cao nhất tính đến thời điểm này
+select * from cthd
+select * from hoadon
+create function fundoanhso ()
+returns table
+as
+return (select top 1 sum(c.soluong *c.giaban) as [doanh số] from cthd as c join hoadon as hd
+on hd.sohd=c.sohd
+group by hd.makh)
+select * from fundoanhso()
+--5.Viết hàm trả về số lượng sản phẩm bán chạy nhất trong tháng 2/2022
+select * from cthd
+select * from hoadon
+create function funsoluongmax ()
+returns int
+as
+begin
+declare @soluongmax int 
+select top (1) @soluongmax=sum(c.soluong) from cthd as c join hoadon as hd
+on hd.sohd =c.sohd
+where month(ngayhd)=2 and year (ngayhd) =2022
+group by c.masp
+order by sum(c.soluong) desc
+return @soluongmax
+end
+drop function funsoluongmax
+select dbo.funsoluongmax() as [số lượng sản phẩm bán chạy nhất]
+--6. Viết hàm tính tiền bán được của sản phẩm x(x là mã sản phẩm, tham số đầu vào)
+select * from cthd
+create function funtinhtien (@x char(4))
+returns int
+as
+begin
+declare @tien int
+select @tien = sum(soluong *giaban) from cthd
+where @x=masp
+group by masp
+return @tien
+end
+drop function funtinhtien
+select dbo.funtinhtien('SP01') as N'Tiền bán được của sản phẩm'
+--7.Viết hàm cho biết trung bình số lượng bán được của mỗi sản phẩm tron ngày x(x là tham số đầu vào của hàm)
+select * from cthd
+select * from hoadon
+create function funavg (@x int)
+returns table 
+as
+return (select c.masp, avg (c.soluong) as[số lượng trung bình] from cthd as c join hoadon as hd
+on c.sohd=hd.sohd
+where @x= day(ngayhd)
+group by c.masp
+)
+drop function funavg
+select * from funavg ('2')
+--9. Viết hàm trả về tổng số lượng bán của mã sản phẩm x (x là MaSP, x là tham số của hàm)
+create function funtong (@x char(4) )
+returns int
+as
+begin
+declare @tong int
+select @tong =sum(soluong) from cthd where @x=masp group by masp
+return @tong
+end
+drop function funtong
+select dbo.funtong('SP01') as[Tổng số lượng bán của sản phẩm ]
+--10.Viết hàm trả về số hóa đơn của khách hàng x (x là MaKH, x là tham số của hàm)
+select * from hoadon
+create function funhoadon (@makhachhang char(4))
+returns int
+as
+begin
+declare @sohoadon int
+select @sohoadon = count (*) from hoadon where @makhachhang =makh group by makh
+return @sohoadon
+end
+select dbo.funhoadon ('KH02') as [số hoá đơn]
+--11.Viết hàm TrangThai(x) trong đó x là tham số. Hàm trả về một trong các loại sau:
+--Nếu x>=300 thì bán chạy
+--Nếu 100<=x<300 trung bình
+--Nếu x<100 thì bán ít
+--Vận dụng để đánh giá trạng thái của các sản phấm bán được , giá trị truyền cho x là tổng số lượng đã bán của các sản phẩm.
+select * from cthd
+select sum(c.soluong) from cthd as c group by c.masp
+create function funtrangthaivip (@tongsoluong int )
+returns Nchar(20)
+as
+begin
+declare @trangthai Nchar(20)
+if (@tongsoluong >=300)
+set @trangthai=N'Bán chạy'
+if (@tongsoluong >=100 and @tongsoluong <300)
+set @trangthai=N'bán trung bình'
+else 
+set @trangthai=N'Bán ít'
+return @trangthai
+end
+select dbo.funtrangthaivip ('3') as[tình trạng của tổng số lượng bán]
