@@ -710,3 +710,134 @@ set @trangthai=N'Bán ít'
 return @trangthai
 end
 select dbo.funtrangthaivip ('3') as[tình trạng của tổng số lượng bán]
+---------------------------------------------  Bài thực hành 8 TRIGGER----------------------------------------------------
+--1. Tạo Trigger ràng buộc soluong trong bảng sanpham >= soluong nhập vào bảng CTHD (cùng mã hàng)
+-- cái đề đọc hơi cấn, sửa lại như z sẽ hợp lý hơn
+--1. Tạo Trigger ràng buộc soluong trong bảng sanpham >= soluong bán vào bảng CTHD (cùng mã hàng)
+select * from sanpham
+select * from cthd
+drop trigger trgsoluong
+alter trigger trgsoluong 
+on cthd
+for insert,update
+as
+begin
+declare @mahang varchar(5)
+select @mahang = masp from inserted
+declare @soluongsp int
+select @soluongsp = soluong from sanpham
+where masp= @mahang
+declare @soluongnhap int
+select @soluongnhap = sum(soluong) from cthd
+where masp= @mahang
+group by masp
+if (@soluongnhap >= @soluongsp)
+begin
+rollback tran
+PRINT(N'Không được thêm số lượng hàng nhập < số lượng đã bán')
+end
+end
+-- test trigger
+insert into cthd values ('HD01','SP09','200','5000') 
+--2. Tạo trigger không cho phép nhập vào bảng Sanpham những mặt hàng có số lượng <= 10
+select * from sanpham
+create trigger trgsanpham on sanpham
+for insert
+as
+begin
+declare @soluong int
+select @soluong= soluong from inserted
+if (@soluong <=10)
+begin
+rollback tran
+PRINT(N'Không được thêm những sản phẩm có số lượng nhỏ hơn hoặc bằng 10')
+end
+end
+--3.Viết trigger khi sửa giá cho một (hoặc nhiều) masp thì in ra: 
+--  +Danh sách các sản phẩm vừa được sửa giá
+--  +Danh sách các masp vừa được sửa cùng giá cũ và giá mới
+select * from sanpham
+create trigger trggia on sanpham
+for update
+as
+begin
+declare @masp varchar(4)
+select masp as [Danh sách các sản phẩm vừa được sửa giá] from inserted 
+select gia as N'giá cũ' from deleted
+select gia as N'giá mới' from inserted
+PRINT (N'trigger thành công')
+end
+--test 
+update sanpham
+set gia='200'
+where masp='SP02'
+--trả về như cũ
+update sanpham
+set gia='100'
+where masp='SP02'
+--4. Tạo trigger không cho phép xoá những nhân viên có thâm niên trên 10 năm 
+select * from nhanvien
+create trigger trgnhanvien on nhanvien
+after delete 
+as
+begin
+declare @manv varchar(5)
+select @manv =manv from deleted
+declare @sonamlam int
+select @sonamlam = datediff(year,ngaylamviec,getdate()) from deleted
+where manv = @manv
+if (@sonamlam >10) 
+begin
+rollback tran
+PRINT (N'Bậy rồi bạn ơi . Đừng xoá người ta chớ. không được xoá những người có thâm niên trên 10 năm')
+end
+end
+--test
+delete from nhanvien
+where manv='NV014'
+-- trả về như cũ :)
+insert into nhanvien values
+('NV014', N'Nguyễn Hiền', '1995-07-07', 1, '2005-10-20', '8651831888', 'cntt41dbuimaihien@gmail.com')
+---- truy vấn số thâm niên của nhân viên
+select datediff(year,ngaylamviec,getdate()) as[số năm thâm niên] from nhanvien
+--5.Viết trigger cập nhập lại số lượng ở bảng sản phẩm khi khách hàng không mua mặt hàng hay thay đổi số lượng đặt hàng trong CTHD
+drop trigger trgdathang on cthd
+after update,delete
+as
+begin
+-- Không mua mặt hàng tức là đặt xok boom đéo chịu lấy, tức là phải trả về kho (deleted)
+-- Thay đổi số lượng đặt hàng (inserted)
+declare @soluongthaydoi int 
+select @soluongthaydoi from inserted
+where masp = (select masp from inserted)
+declare @soluongspcuakho int
+select @soluongspcuakho= soluong from sanpham
+where masp = (select masp from inserted) or masp = (select masp from deleted)
+--số lượng đặt hàng trước đó của khách khách trc khi chưa bị thay đổi
+declare @soluongdattruocdo int 
+select @soluongdattruocdo = sum(soluong) from cthd
+where masp = (select masp from inserted) or masp = (select masp from deleted)
+group by masp
+if Exists(select * from deleted) 
+begin
+print(N'trả số lượng về kho')
+set @soluongspcuakho =@soluongspcuakho+@soluongdattruocdo
+update sanpham
+set soluong= @soluongspcuakho
+where masp in (select masp from inserted) or masp in (select masp from deleted)
+end
+if exists(select * from inserted)
+begin
+print(N'Số lượng của kho đã trừ cho số lượng thay đổi')
+set @soluongspcuakho=@soluongspcuakho-@soluongthaydoi
+update sanpham
+set soluong= @soluongspcuakho
+where masp = (select masp from inserted) or masp = (select masp from deleted)
+end
+end
+select * from sanpham
+select * from cthd
+--test boomhang
+update cthd
+set soluong =600
+where masp ='Sp11'
