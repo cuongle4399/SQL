@@ -841,3 +841,42 @@ select * from cthd
 update cthd
 set soluong =600
 where masp ='Sp11'
+--Câu 6. Tạo Trigger có nhiệm vụ sửa lại giaban trong bảng CTHD sao cho giaban=1.3*gia (gia trong bảng Sanpham)
+select * from sanpham
+select * from cthd
+create trigger triggia on sanpham
+for update
+as
+begin
+declare @giamoi int
+select @giamoi = gia from inserted
+if exists(select gia from inserted)
+begin
+update cthd
+set giaban =soluong*@giamoi*1.3
+where masp in (select masp from inserted)
+print(N'Đã update giá bán trong bảng cthd cao hơn giá nhập 1.3')
+end
+end
+-- test
+update sanpham
+set gia= 200
+where masp='sp01'
+--7. Viết trigger ràng buộc dữ liệu chỉ cho khách hàng đặt 1 đơn trong 1 ngày.
+select * from hoadon
+create trigger trig27 on hoadon
+for insert
+as
+begin
+if exists(select count(*) from hoadon
+where makh = (select makh from inserted)
+group by makh,day(ngayHD)
+having count(*)>=1)
+begin
+print(N'Mỗi khách chỉ được đặt 1 đơn trong 1 ngày')
+rollback tran
+end
+else
+print(N'oke nè')
+end
+insert into hoadon values ('HD018','2024-03-11','kh09','Nv006','20000')
