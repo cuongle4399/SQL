@@ -249,14 +249,19 @@ insert into cthd values ('HD12','sp11',88888,10000000)
 -- 30.Viết trigger kiểm soát việc cập nhật thông tin sản phẩm: không cho phép cập 
 -- nhật thông tin của sản phẩm nếu sản phẩm đó đã được bán.
 select * from cthd
-create trigger trigupdate on cthd
+select * from sanpham
+alter trigger trigupdate on sanpham
 for update
 as
+begin
+if exists(select masp from cthd
+where masp in (select masp from inserted))
 begin
 rollback tran
 print(N'Không cho phép update các sản phẩm đã được bán trong bảng cthd')
 end
+end
 --- test
-update cthd
-set masp='sp07'
-where sohd='hd01'
+update sanpham
+set soluong=77
+where masp='sp02'
