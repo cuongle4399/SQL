@@ -1,2 +1,2 @@
-## Bú nhiều quá rồi đó Donate tôi 10k uống trà đá ik nào :)))
-<img align ="center" width ="200" src="https://github.com/cuongle4399/cuongle4399/blob/main/tkmbbank.jpg" >
+## Comboo đau lưng mỏi đít ở đây chớ đâu :(((
+<img align ="center" width ="400" src="https://i.pinimg.com/originals/66/83/3e/66833e07d6fb9eb5d724e47d0c814285.gif" >
