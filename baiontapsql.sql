@@ -69,7 +69,7 @@ set gia =gia*0.1
 where masp in (select masp from cthd group by masp having count(*) <3)
 -- Câu 15: Liệt kê thông tin chi tiết các đơn hàng của khách hàng mà từ ngày 10/12/2022 đến nay không mua hàng nữa
 select * from hoadon
-where ngayhd < '2022-12-10'
+where ngayhd < '2022-12-10' and masp not in (select masp from cthd)
 -- Câu 16 Truy vấn tạo bảng nhanvientot, dữ liệu lấy từ bảng nhân viên, gồm 20 % số nhân viên có từ 2 đơn hàng trở lên
 select * from hoadon
 select * from nhanvien
